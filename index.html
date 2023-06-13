@@ -1,0 +1,1907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="initial-scale=1.0, width=device-width">
+    <title>Snapsort</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/photoswipe/5.3.7/photoswipe.min.css"
+          integrity="sha512-LFWtdAXHQuwUGH9cImO9blA3a3GfQNkpF2uRlhaOpSbDevNyK1rmAjs13mtpjvWyi+flP7zYWboqY+8Mkd42xA=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/photoswipe/5.3.7/photoswipe-lightbox.esm.min.js"
+            integrity="sha512-NM5W4Rpvwxo9iNWn2d8hI4nbn2clDfYR9RBVafwxB72h/wFw3oCmNqub50C57c3M+J8W3VyG8ZE53BsppwM0Ig=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css?family=Merriweather:300&display=swap" rel="stylesheet">
+    <base target="_blank">
+</head>
+<body>
+
+<!--i once had the problem of all the styles not fitting the allowed head size, so i put style here-->
+<style>
+    :root {
+
+        --theme-color: #388e3c;
+        --background-color: white;
+
+        --theme-color-green: #388e3c;
+        --theme-color-yellow: #F4B400;
+        --theme-color-grey: #9e9e9e;
+        --theme-color-light-grey: lightgrey;
+        --shake-distance: 0.5rem;
+    }
+
+    html {
+        font-family: 'Merriweather', serif;
+    }
+
+    body, html {
+        margin: 0; /*100vh creates scrollbar otherwise*/
+    }
+
+
+    /*CENTERING//////////////////////////////////////////////////////////////////////////////////////////////////////*/
+    /*dont apply these to body*/
+    /*the container in which the child containers should be centered */
+    .center-parent {
+        display: grid;
+        place-items: center;
+        height: 100vh;
+        /*padding: 0 1em 0 1em; !*prevent text to touch border on smaller screens*!*/
+    }
+
+    /*the childs to be centered (not needed)*/
+    .center-child {
+        /*in chrome mobile, makes page take up whole space*/
+        min-width: 90vw;
+        /*also setting this width somehow prevents the unreachable left side problem induced by indented class*/
+        width: 90vw;
+    }
+
+    @media screen and (min-width: 50rem) {
+        .center-child {
+            /*prevents some page jumping when collapsing items*/
+            min-width: 30rem;
+            max-width: 30rem;
+
+        }
+    }
+
+
+    .title {
+        font-size: 3em;
+        font-style: italic;
+    }
+
+    /*subtitle under h1 header*/
+    .subtitle {
+        font-size: 0.8rem;
+        margin-top: -2rem;
+        font-style: italic;
+
+    }
+
+    /*all links on the site*/
+    .link {
+        color: var(--theme-color);
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    /*when a link is hovered*/
+    .link:hover {
+        text-decoration: underline;
+    }
+
+    .hidden-link {
+        text-decoration: none;
+        color: inherit;
+        cursor: pointer;
+    }
+
+
+    /*button with a link*/
+    .link-button {
+        border: 0.15rem solid var(--theme-color);
+        background-color: var(--theme-color);
+        color: var(--background-color);
+        text-decoration: none;
+        font-weight: bold;
+        padding: 0.4rem 0.5rem;
+        text-align: center;
+        display: inline-block;
+        /*margin-right: 5px;*/
+        cursor: pointer;
+        margin: 0.5em;
+        border-radius: 0.4em;
+    }
+
+
+    .invisible-button {
+        background-color: transparent;
+        border: none;
+        color: #000; /* Set the desired color for the text */
+        cursor: pointer;
+        padding: 0;
+        font-weight: bold;
+    }
+
+    .invisible-button:hover {
+        /*box shadow is basically a border which does not move adjoining elements*/
+        box-shadow: 0 0 0 0.05rem lightgrey;
+    }
+
+    .c-section-button:hover {
+        box-shadow: 0 0 0 0.05rem lightgrey;
+    }
+
+    /*button with a link with inverse colors (apply link-button first)*/
+    .link-button-inverse {
+        color: var(--theme-color);
+        background-color: var(--background-color);
+    }
+
+
+    /*upload button*/
+    .upload-btn-wrapper {
+        position: relative;
+        overflow: hidden;
+        display: inline-block;
+        margin: 0.5em;
+    }
+
+    .upload-btn-wrapper input[type=file] {
+        font-size: 10rem;
+        position: absolute;
+        left: 0;
+        top: 0;
+        opacity: 0;
+    }
+
+    /*flex table*/
+
+    .flex-table {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 0.8rem;
+    }
+
+    .flex-table-row {
+        display: flex;
+        align-items: center;
+        margin: 0.5rem 0 0.5rem 0;
+    }
+
+    .flex-table-first-row {
+        font-weight: bold;
+        border-bottom: 0.2rem solid black;
+        padding-bottom: 0.4rem;
+    }
+
+    .flex-table-cell {
+        flex: 1;
+        margin-right: 0.6rem;
+        padding: 0.3rem;
+    }
+
+    .flex-table-big-cell {
+        flex: 4;
+    }
+
+    .flex-table-small-cell {
+        text-align: center;
+        min-width: 3em;
+        flex: 1;
+    }
+
+    .flex-table-small-cell:first-child {
+        border-right: 0.15rem solid black;
+    }
+
+    .flex-table-small-cell:last-child {
+        border-left: 0.15rem solid black;
+
+    }
+
+
+    @keyframes jello {
+        from, 11.1%, to {
+            transform: none;
+        }
+
+        22.2% {
+            transform: skewX(-5deg) skewY(-5deg);
+        }
+
+        33.3% {
+            transform: skewX(2.5deg) skewY(2.5deg);
+        }
+
+        44.4% {
+            transform: skewX(-1.25deg) skewY(-1.25deg);
+        }
+
+        55.5% {
+            transform: skewX(0.625deg) skewY(0.625deg);
+        }
+
+        66.6% {
+            transform: skewX(-0.3125deg) skewY(-0.3125deg);
+        }
+
+        77.7% {
+            transform: skewX(0.15625deg) skewY(0.15625deg);
+        }
+
+        88.8% {
+            transform: skewX(-0.078125deg) skewY(-0.078125deg);
+        }
+    }
+
+    .shake-jello {
+        animation: jello 0.5s;
+    }
+
+    /*shake animation*/
+    .shake {
+        animation: shake 0.3s;
+    }
+
+
+    @keyframes shake {
+        0% {
+            transform: translateY(0);
+        }
+        20% {
+            transform: translateY(calc(var(--shake-distance) * -1));
+        }
+        40% {
+            transform: translateY(var(--shake-distance));
+        }
+        60% {
+            transform: translateY(calc(var(--shake-distance) * -1));
+        }
+        80% {
+            transform: translateY(var(--shake-distance));
+        }
+        100% {
+            transform: translateY(0);
+        }
+    }
+
+    /*vertical*/
+
+    .vertical {
+        display: flex;
+        flex-direction: column;
+    }
+
+    /*collapsable section*/
+    /*hold everything about the section*/
+    .c-section {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .title-big {
+        font-size: 1.8rem;
+        font-weight: bold;
+    }
+
+    .title-medium {
+        font-size: 1.4rem;
+        font-weight: bold;
+    }
+
+    .title-small {
+        font-size: 1rem;
+        font-weight: bold;
+    }
+
+    /*hold the title and the collapse image button*/
+    .c-section-title-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.6rem;
+        cursor: pointer;
+    }
+
+    .c-section-button {
+        transition: transform 200ms ease;
+        margin-right: 1rem;
+        font-size: 1.0em; /*em, i want to inherit the font size from the title row*/
+    }
+
+    .c-section-title {
+        flex-grow: 1;
+        margin: 0;
+    }
+
+    /*the content to hide / show*/
+    .c-section-content {
+        /*show by default if javascript is disabled*/
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        0% {
+            opacity: 0;
+        }
+        100% {
+            opacity: 1;
+        }
+    }
+
+    /*photoswipe slide markup for items which cannot be displayed*/
+    .custom-html-slide {
+        font-size: 3rem;
+        line-height: 3rem;
+        max-width: 25rem;
+        width: 100%;
+        padding: 0 1.5rem;
+        margin: 5rem auto 0;
+        color: #fff;
+    }
+
+    /*footer visible when sorting */
+    .footer {
+        background: var(--background-color);
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 8rem;
+        z-index: 888888; /* what the hell is the z index of photoswipe */
+        display: flex;
+        flex-direction: column;
+        visibility: hidden;
+        /*flex-basis: auto;*/
+        place-items: center;
+    }
+
+    .footer-info-row {
+        height: 1.5rem;
+    }
+
+    .footer-keybindings {
+        display: flex;
+        white-space: nowrap;
+        flex-wrap: wrap;
+        height: 5rem;
+        /*if i hide overflow the buttons center instead of cut off*/
+        overflow-y: auto;
+    }
+
+    .footer-keybinding {
+        display: flex;
+        margin: 0.1rem;
+        border: 0.1rem solid black;
+        /*box-shadow: 0 0 0 0.1rem black;*/
+        font-family: monospace;
+        background-color: var(--theme-color-light-grey);
+        cursor: pointer;
+        height: 2rem;
+        align-items: center;
+        justify-content: center;
+
+    }
+
+    .footer-keybinding > div {
+        background-color: var(--background-color);
+        margin: 0.2rem;
+        border: 0.1rem solid black;
+        padding: 0.1rem 0.3rem 0.2rem 0.3rem;
+        /*height conflicts with margin*/
+        height: 1rem;
+    }
+
+    .footer-keybinding-selected {
+        background-color: var(--theme-color-green);
+    }
+
+    .footer-keybinding-selected > div {
+        background-color: var(--theme-color-yellow);
+    }
+
+    .footer-keybinding-key {
+        font-weight: bold;
+    }
+
+    .footer-keybinding-folder {
+    }
+
+    .selected-footer-keybinding {
+        background-color: var(--theme-color);
+    }
+
+    .selected-footer-keybinding-item {
+        background-color: greenyellow;
+    }
+
+
+    /*drag and drop markup*/
+    #drag-target {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 999999999999;
+        pointer-events: none;
+    }
+
+    #drag-target.show {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #drag-text {
+        font-size: 2rem;
+        color: #fff;
+        background-color: #333;
+        padding: 1.4rem;
+        border-radius: 0.2rem;
+    }
+
+    /* The snackbar - position it at the bottom and in the middle of the screen */
+    /*hehe chatgpt*/
+    #snackbar {
+        visibility: hidden;
+        min-width: 10rem;
+        margin-left: -5rem; /* Divide value of min-width by 2 */
+        background-color: #333;
+        color: #fff;
+        text-align: center;
+        border-radius: 0.1rem;
+        padding: 1rem;
+        position: fixed;
+        z-index: 999999;
+        left: 50%;
+        bottom: 2rem;
+    }
+
+    @keyframes fadein {
+        from {
+            bottom: 0;
+            opacity: 0;
+        }
+        to {
+            bottom: 2rem;
+            opacity: 1;
+        }
+    }
+
+    @keyframes fadeout {
+        from {
+            bottom: 2rem;
+            opacity: 1;
+        }
+        to {
+            bottom: 0;
+            opacity: 0;
+        }
+    }
+
+    /*progress bar*/
+    .progress-bar {
+        width: 15rem;
+        height: 1.8rem;
+        border: 0.1rem solid lightgrey;
+        position: relative;
+        border-radius: 1000px;
+        display: none;
+    }
+
+    .progress {
+        width: 0;
+        transition: width 0.2s ease-out; /*smooth the progress bar*/
+        height: 100%;
+        background-color: var(--theme-color-yellow);
+        border-radius: 1000px;
+    }
+
+    .progress-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-weight: bold;
+        font-size: 0.8em;
+    }
+
+    .indented {
+        margin-left: 2.5rem;
+        position: relative;
+    }
+
+    .indented::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -3rem;
+        width: 3rem;
+        height: 100%;
+        background-color: transparent;
+    }
+
+    pre {
+        white-space: pre-wrap;
+    }
+
+    .spinner {
+        animation: spin 3s infinite linear;
+        display: inline-block;
+    }
+
+    @keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .floater {
+        animation: float 3s infinite ease-in-out; /* Animation properties */
+        display: inline-block;
+    }
+
+    @keyframes float {
+        0% {
+            transform: translateY(0); /* Start position */
+        }
+        50% {
+            transform: translateY(-0.2rem); /* Mid position (upward movement) */
+        }
+        100% {
+            transform: translateY(0); /* End position (return to original position) */
+        }
+    }
+
+</style>
+<div id="drag-target">
+    <span id="drag-text">Drop to upload</span>
+</div>
+<div id="snackbar"></div>
+<div class="center-parent">
+    <div class="center-child">
+        <h1 class="title hidden-link" id="title">Snapsort</h1>
+        <p class="subtitle">
+            Sort photos within your browser!
+        </p>
+        <div id="log-bar">
+        </div>
+
+        <section class="c-section" id="upload-section">
+            <div class="c-section-title-row title-big">
+                <span class="c-section-button" title="Open section">&gt;</span>
+                <p class="c-section-title">1: Upload files</p>
+            </div>
+            <div class="c-section-content indented">
+                Upload or drop files to sort.
+                <br>
+                <div class="upload-btn-wrapper">
+                    <button class="link-button" id="folder-upload-btn">Upload folder</button>
+                    <input type="file" id="folder-upload" webkitdirectory directory multiple>
+                </div>
+                <div class="upload-btn-wrapper">
+                    <button class="link-button" id="upload-btn">Upload files</button>
+                    <input id="file-upload" type="file" name="myfile" multiple/>
+                </div>
+                <div class="upload-btn-wrapper">
+                    <button class="link-button link-button-inverse" id="upload-example-button">Load example</button>
+                </div>
+                <br>
+                <div id="upload-info"></div>
+                <div id="previous-upload-info"></div>
+
+            </div>
+        </section>
+
+
+        <section class="c-section" id="keybinding-section">
+            <div class="c-section-title-row title-big">
+                <span class="c-section-button" title="Open section">&gt;</span>
+                <p class="c-section-title">2: Folders</p>
+            </div>
+            <div class="c-section-content">
+                Enter the names of the folders to sort to.
+                <div class="flex-table" id="keybindings-table">
+                    <div class="flex-table-row flex-table-first-row">
+                        <div class="flex-table-cell flex-table-small-cell"><span class="">🔑</span></div>
+                        <div class="flex-table-cell flex-table-big-cell">Folder</div>
+                        <!--hehe-->
+                        <button class="flex-table-cell flex-table-small-cell invisible-button"
+                                id="add-keybinding-button"><span
+                                style="color: transparent;  text-shadow: 0 0 0 var(--theme-color-green); transform: rotate(45deg); display: inline-block">❌</span>
+                        </button>
+                    </div>
+                </div>
+                Optionally, add hotkeys to sort quickly to that folder.
+                <br>
+                <a class="link" id="example-upload-link">Example</a>
+            </div>
+        </section>
+
+        <section class="c-section" id="sort-section">
+            <div class="c-section-title-row title-big">
+                <span class="c-section-button" title="Open section">&gt;</span>
+                <p class="c-section-title">3: Sort</p>
+            </div>
+            <div class="c-section-content indented">
+                <div class="progress-bar" id="upload-progress">
+                    <div class="progress"></div>
+                    <div class="progress-text">Upload progress bar</div>
+                </div>
+                Click to open the gallery to start sorting!<br>
+                <button class="link-button link-button-inverse" id="open-gallery-button">Start sorting</button>
+            </div>
+        </section>
+
+
+        <section class="c-section" id="apply-sort-section">
+            <div class="c-section-title-row title-big">
+                <span class="c-section-button" title="Open section">&gt;</span>
+                <p class="c-section-title">4: Apply sorting</p>
+            </div>
+            <div class="c-section-content indented">
+                These commands create your folders, and move the files to them.
+                <br>
+                You can always undo this, see the 'Other' section.
+                <section class="c-section" id="apply-windows">
+                    <div class="c-section-title-row title-medium">
+                        <span class="c-section-button" title="Open section">&gt;</span>
+                        <p class="c-section-title">Windows</p>
+                    </div>
+                    <div class="c-section-content indented" id="windows-export"></div>
+                </section>
+
+                <section class="c-section" id="apply-linux">
+                    <div class="c-section-title-row title-medium">
+                        <span class="c-section-button" title="Open section">&gt;</span>
+                        <p class="c-section-title">Linux / MacOS</p>
+                    </div>
+                    <div class="c-section-content indented" id="linux-export"></div>
+                </section>
+
+                <section class="c-section" id="apply-universal">
+                    <div class="c-section-title-row title-medium">
+                        <span class="c-section-button" title="Open section">&gt;</span>
+                        <p class="c-section-title">Universal (zip)</p>
+                    </div>
+                    <div class="c-section-content indented">
+                        Download a .zip file with your sorted items.
+                        <br>
+                        <div class="progress-bar" id="zip-progress">
+                            <div class="progress"></div>
+                            <div class="progress-text">Zip progress bar</div>
+                        </div>
+                        <button id="download-universal-sort" class="link-button link-button-inverse">Download .zip
+                        </button>
+                        <br>
+                        This is slower and takes more space compared to applying the sort with commands.<br>
+                        The zip will contain all the files you just uploaded.
+                    </div>
+                </section>
+            </div>
+        </section>
+
+        <section class="c-section" id="additional-options-section">
+            <div class="c-section-title-row title-big">
+                <span class="c-section-button" title="Open section">&gt;</span>
+                <p class="c-section-title">Other</p>
+            </div>
+            <div class="c-section-content indented">
+                <section class="c-section" id="undo-sort-section">
+                    <div class="c-section-title-row title-medium">
+                        <span class="c-section-button" title="Open section">&gt;</span>
+                        <p class="c-section-title">Undo sorting</p>
+                    </div>
+                    <div class="c-section-content indented">
+                        These commands move the sorted items from their folders back to the main folder.
+                        <section class="c-section" id="undo-windows">
+                            <div class="c-section-title-row title-small">
+                                <span class="c-section-button" title="Open section">&gt;</span>
+                                <p class="c-section-title">Windows</p>
+                            </div>
+                            <div class="c-section-content indented" id="windows-undo"></div>
+                        </section>
+
+                        <section class="c-section" id="undo-linux">
+                            <div class="c-section-title-row title-small">
+                                <span class="c-section-button" title="Open section">&gt;</span>
+                                <p class="c-section-title">Linux / MacOS</p>
+                            </div>
+                            <div class="c-section-content indented" id="linux-undo"></div>
+                        </section>
+
+                    </div>
+                </section>
+
+                <section class="c-section" id="about-section">
+                    <div class="c-section-title-row title-medium">
+                        <span class="c-section-button" title="Open section">&gt;</span>
+                        <p class="c-section-title">About</p>
+                    </div>
+                    <div class="c-section-content indented">
+                        Developed by <a class="link" href="https://t.me/JortDeveloper">Jort</a>.
+                        <br>
+                        GitHub: <a class="link" href="https://github.com/jort-dev/snapsort">Snapsort</a>.
+                        <br>
+                        <br>
+                        The reason I developed this app is simply because I could not find an existing program which
+                        allows you to manually sort images with hotkeys.
+                        <br>
+                        <br>
+                        However, I have found a similar tool which sorts your files automatically with AI!
+                        <br>
+                        <ul>
+                            <li>
+                                <a class="link" href="https://ai-photo-sorter.vercel.app/">AI photo sorter</a> created
+                                by <a class="link" href="https://github.com/visheratin/ai-photo-sorter">Visheratin</a>.
+                            </li>
+                        </ul>
+                        I was inspired by the command line export method his work has.
+                        <br>
+                        <br>
+                        <br>
+                        If you have more money than you need,
+                        and appreciate this tool, a donation would really excite me!
+                        <ul>
+                            <li>BTC: <code
+                                    style="word-wrap: break-word">bc1q8q9pt8c5uz92t7r0ltjmzzft9eulvey5cqghxx</code></li>
+                            <li>Paypal:
+                                <form action="https://www.paypal.com/donate" method="post">
+                                    <input type="hidden" name="hosted_button_id" value="Y7XZETS3RPWW6"/>
+                                    <input type="image"
+                                           src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif"
+                                           border="0" name="submit" title="PayPal - Donate to this dude"
+                                           alt="Donate with PayPal button"/>
+                                    <img alt="" border="0" src="https://www.paypal.com/en_NL/i/scr/pixel.gif" width="1"
+                                         height="1"/>
+                                </form>
+                            </li>
+                            <li>Ko-fi: <br><a href="https://ko-fi.com/jort_dev" class="link">Donate a 'coffee'</a></li>
+                        </ul>
+                    </div>
+                </section>
+
+
+                <section class="c-section" id="advanced-options-section">
+                    <div class="c-section-title-row title-medium">
+                        <span class="c-section-button" title="Open section">&gt;</span>
+                        <p class="c-section-title">Advanced options</p>
+                    </div>
+                    <div class="c-section-content">
+                        Below are some options I mainly used for testing whilst developing this tool.
+                        <br>
+                        <br>
+                        Simulate the uploading of files, using example images:
+                        <br>
+                        <button class="link-button link-button-inverse" id="example-images-button">Load example images
+                        </button>
+                        <button class="link-button link-button-inverse" id="example-images-fast-button">Load example
+                            images (fast)
+                        </button>
+                        <br>
+                        Clear all your sorted items:
+                        <br>
+                        <button class="link-button link-button-inverse" id="clear-mappings-button">Clear sorts</button>
+                        <br>
+                        Load example keybindings, as an example how the program can be used:
+                        <br>
+                        <button class="link-button link-button-inverse" id="example-keybindings-button">Load example
+                            keybindings
+                        </button>
+                        <br>
+                        Clear all the saved data. This includes defined folders and hotkeys, sorted items, opened
+                        sections and
+                        more:
+                        <br>
+                        <button class="link-button link-button-inverse" id="clear-storage-button">Clear all website data
+                        </button>
+                    </div>
+                </section>
+            </div>
+        </section>
+
+
+        <div class="footer" id="sort-footer">
+            <div class="footer-info-row" id="filename-display" style="font-weight: bold">Filename</div>
+            <div class="footer-info-row" id="mapped-folder-display" style="font-style: italic">Unsorted</div>
+            <div class="footer-keybindings" id="footer-keybindings"></div>
+        </div>
+
+    </div>
+</div>
+
+
+</body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.6.0/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<script type="module">
+    import PhotoSwipeLightbox
+        from 'https://cdnjs.cloudflare.com/ajax/libs/photoswipe/5.3.7/photoswipe-lightbox.esm.min.js';
+    import PhotoSwipeVideoPlugin from 'https://cdn.jsdelivr.net/npm/photoswipe-video-plugin@1.0.2/src/index.min.js';
+
+
+    let pswp = null; // photoswipe instance, it is non-null if open
+    let lastTimeoutId = null; // used to log to user with a timeout
+    let loadedCount = 0; // keep track of how many uploaded items are loaded for gallery
+    let dragCounter = 0; // file drop: keep count of drag events to identify fake dragleave events
+
+    function logToUser(msg, timeout = 3000) {
+        clearTimeout(lastTimeoutId);
+        if (timeout > 0) {
+            let toastElement = document.getElementById("snackbar");
+            toastElement.textContent = msg
+            console.log(toastElement.textContent)
+            toastElement.classList.add("show")
+            toastElement.style.visibility = "visible"
+            let duration = timeout / 1000 - 0.5
+            toastElement.style.animation = `fadein 0.5s, fadeout 0.5s ${duration}s`
+            lastTimeoutId = setTimeout(function () {
+                toastElement.classList.remove("show");
+                toastElement.style.visibility = "hidden"
+            }, timeout);
+        }
+    }
+
+    function shakeElement(element) {
+        element.classList.add("shake-jello");
+
+        setTimeout(function () {
+            element.classList.remove("shake-jello");
+        }, 400);
+    }
+
+    function fileObjectToGalleryInputItem(file) {
+        let item = {}
+        const itemHtml = `<div class="custom-html-slide">${file.name}</div>`; // fallback if file can't be displayed
+        const fileType = file['type'];
+        // load image
+        const urlObj = URL.createObjectURL(file);
+
+        if (fileType.includes("image")) {
+            item.src = urlObj;
+            let img = new Image();
+            img.onload = function () {
+                ++loadedCount
+                item.width = img.width;
+                item.height = img.height;
+            };
+            img.src = urlObj; //this loads the image, triggering the above event
+        }
+        // load video (takes long)
+        else if (fileType.includes("video")) {
+            let video = document.createElement("video");
+            video.addEventListener("loadeddata", function () {
+                if (video.videoWidth === 0 || video.videoHeight === 0) {
+                    // if 0x0: browser does not support the video type, just show filename
+                    item.html = itemHtml;
+                    ++loadedCount
+                }
+                else {
+                    ++loadedCount
+                    item.width = video.videoWidth;
+                    item.height = video.videoHeight;
+                    item.videoSrc = urlObj;
+                    item.type = "video";
+                    item.msrc = urlObj; // not needed but prevents error showing
+                    item.src = urlObj; // not needed but added for item check and cleanliness
+                }
+            });
+            video.src = urlObj; // this loads the video, triggering the above event
+        }
+        // fallback for remanining file types
+        else {
+            item.html = itemHtml;
+            ++loadedCount
+        }
+        item.alt = file.name;
+        return item;
+    }
+
+    function pollUntilTrue(condition, interval, timeout) {
+        return new Promise((resolve, reject) => {
+            const startTime = Date.now();
+            const intervalId = setInterval(() => {
+                const elapsedTime = Date.now() - startTime;
+                if (condition()) {
+                    clearInterval(intervalId);
+                    resolve();
+                }
+                else if (elapsedTime >= timeout) {
+                    clearInterval(intervalId);
+                    reject(new Error(`Timeout of ${timeout}ms reached`));
+                }
+            }, interval);
+        });
+    }
+
+    async function urlToImageFile(filename, url, fast = false) {
+        if (fast) {
+            const width = 2400
+            const height = 1600
+            url = `https://dummyimage.com/${width}x${height}/000000/ffffff&text=${filename}`
+        }
+
+        const response = await fetch(url);
+        const arrayBuffer = await response.arrayBuffer();
+        const blob = new Blob([arrayBuffer]);
+        let file = new File([blob], filename);
+        file = new File([file], file.name, {type: "image/jpeg"}); //cant set it directly
+        return file;
+    }
+
+
+    async function getMockUploadEvent(fast = false) {
+
+        let urls = {
+            i1queen1: `https://images.pexels.com/photos/260024/pexels-photo-260024.jpeg?cs=srgb&dl=pexels-pixabay-260024.jpg&fm=jpg&w=3089&h=2114`,
+            i8queen2: `https://images.pexels.com/photos/3863802/pexels-photo-3863802.jpeg?cs=srgb&dl=pexels-john-ray-ebora-3863802.jpg&fm=jpg&w=4000&h=6000`,
+            i5queen3: `https://images.pexels.com/photos/2062542/pexels-photo-2062542.jpeg?cs=srgb&dl=pexels-bestbe-models-2062542.jpg&fm=jpg&w=4000&h=6000`,
+            i3water1: `https://images.pexels.com/photos/1556381/pexels-photo-1556381.jpeg?cs=srgb&dl=pexels-ray-piedra-1556381.jpg&fm=jpg&w=1728&h=2592`,
+            i9water2: `https://images.pexels.com/photos/4035587/pexels-photo-4035587.jpeg?cs=srgb&dl=pexels-g%C3%BCl-i%C5%9F%C4%B1k-4035587.jpg&fm=jpg&w=3264&h=4928`,
+            i3elephant1: `https://images.pexels.com/photos/1054655/pexels-photo-1054655.jpeg?cs=srgb&dl=pexels-harvey-sapir-1054655.jpg&fm=jpg&w=3461&h=2150`,
+            i5elephant2: `https://images.pexels.com/photos/133394/pexels-photo-133394.jpeg?cs=srgb&dl=pexels-anthony-%29-133394.jpg&fm=jpg&w=4293&h=2975`,
+            i7elephant3: `https://images.pexels.com/photos/982021/pexels-photo-982021.jpeg?cs=srgb&dl=pexels-venkat-ragavan-982021.jpg&fm=jpg&w=5472&h=3648`,
+            i6rainbow1: `https://images.pexels.com/photos/1685503/pexels-photo-1685503.jpeg?cs=srgb&dl=pexels-egor-kamelev-1685503.jpg&fm=jpg&w=2548&h=3383`,
+            i4rainbow2: `https://images.pexels.com/photos/2279334/pexels-photo-2279334.jpeg?cs=srgb&dl=pexels-vlad-che%C8%9Ban-2279334.jpg&fm=jpg&w=3807&h=5711`,
+            i12rainbow3: `https://images.pexels.com/photos/6390455/pexels-photo-6390455.jpeg?cs=srgb&dl=pexels-jess-loiterton-6390455.jpg&fm=jpg&w=7200&h=9000`,
+        }
+        const width = 600
+        const height = 400
+        let files = []
+        for (let key of Object.keys(urls)) {
+            let url = urls[key]
+            url = url.replace(/(h=)\d+/, "$1" + height);
+            url = url.replace(/(w=)\d+/, "$1" + width);
+            console.log(`Downloading ${key}: ${url}`)
+            let imageFile = await urlToImageFile(key + ".jpg", url, fast);
+            files.push(imageFile)
+        }
+
+        // insert normal files (append prefix to maintain position after sorting)
+        const file1 = new File(["Yes, sorting normal files is also possible"], "i2not-an-image.txt", {type: "text/plain"});
+        const file2 = new File(["But the program is not optimized for it."], "i8file.pdf", {type: "text/plain"});
+        files.splice(2, 0, file1);
+        files.splice(5, 0, file2);
+
+        const mockEvent = {
+            target: {
+                files: files
+            }
+        };
+        return mockEvent
+    }
+
+    function loadGalleryArguments(fileObjects) {
+        // gallery needs dimensions of images etc, so we need to load them
+        loadedCount = 0;
+        let items = []
+        fileObjects.forEach(fileObject => {
+            let item = fileObjectToGalleryInputItem(fileObject);
+            items.push(item);
+        });
+        return {
+            dataSource: items,
+            pswpModule: () => import('/photoswipe/dist/photoswipe.esm.js'),
+            getViewportSizeFn: function (options, pswp) {
+                // also see the paddingfn attribute, aso for each img possible
+                return {
+                    x: document.documentElement.clientWidth,
+                    y: window.innerHeight * 0.9 //subtract the footer, which is 0.1vh
+                };
+            },
+
+            showHideAnimationType: 'none',
+            wheelToZoom: true, // enable mouse scroll zoom
+            bgClickAction: "none", //don't close the gallery if clicked behind image
+            preload: [2, 8], //load more coming images into memory
+
+            //default copies: options set to the default value
+            bgOpacity: 0.8,
+            errorMsg: 'The item cannot be loaded',
+            pinchToClose: true,
+            closeOnVerticalDrag: true,
+            padding: {top: 0, bottom: 0, left: 0, right: 0},
+            indexIndicatorSep: ' / ',
+        }
+    }
+
+    function naturalSortFileObjects(files) {
+        //does not change anything if files are uploaded with the file manager set to sort by name
+        return files.sort((fileA, fileB) => fileA.name.localeCompare(fileB.name, navigator.languages[0] || navigator.language, {
+            numeric: true,
+            ignorePunctuation: true
+        }))
+    }
+
+    function createFooterKeybindingElement(key, folder) {
+        let keybindingDiv = document.createElement("div")
+        keybindingDiv.classList.add("footer-keybinding")
+
+        let keyDiv = document.createElement("div")
+        keyDiv.classList.add("footer-keybinding-key")
+        keyDiv.textContent = key;
+
+        let folderDiv = document.createElement("div")
+        folderDiv.classList.add("footer-keybinding-folder")
+        folderDiv.textContent = folder
+
+        keybindingDiv.addEventListener("click", () => {
+            applyKeybindingByKey(key)
+        })
+
+        keybindingDiv.appendChild(keyDiv)
+        keybindingDiv.appendChild(folderDiv)
+        return keybindingDiv;
+    }
+
+    function loadAndShowSortingFooter() {
+        let keybindings = localStorage.getKeybindings()
+        let footer = document.getElementById("footer-keybindings")
+        keybindings.forEach(keybinding => {
+            let keybindingDiv = createFooterKeybindingElement(keybinding.key, keybinding.folder)
+            footer.appendChild(keybindingDiv)
+        })
+        document.getElementById("sort-footer").style.visibility = "visible"
+    }
+
+
+    function highlightMappingForCurrentItem(folder) {
+        //show the user to what folder the current item open in the gallery is mapped to
+        let mappedFolderDisplay = document.getElementById("mapped-folder-display")
+        if (folder) {
+            mappedFolderDisplay.textContent = folder
+        }
+        else {
+            //because its more neat to inherit visibility from parent, use empty character to prevent jumping
+            mappedFolderDisplay.innerHTML = "&nbsp;"
+        }
+
+        let keybindings = localStorage.getKeybindings()
+        let keybindingIndex = keybindings.findIndex(keybinding => keybinding.folder === folder);
+        //if not found, index will be -1, so nothing will be highlighted
+        let footerKeybindingsElement = document.getElementById("footer-keybindings")
+        for (let i = 0; i < footerKeybindingsElement.childElementCount; i++) {
+            let keybindingElement = footerKeybindingsElement.children[i]
+            if (i === keybindingIndex) {
+                // keybindingElement.style.backgroundColor = "var(--theme-color-green)"
+                keybindingElement.classList.add("footer-keybinding-selected")
+            }
+            else {
+                // keybindingElement.style.backgroundColor = "var(--theme-color-red)"
+                keybindingElement.classList.remove("footer-keybinding-selected")
+            }
+        }
+
+    }
+
+    function getIndexByFilename() {
+        let filename = localStorage.getFilename()
+        if (!filename) {
+            return 0;
+        }
+        let uploads = localStorage.getUploads()
+        if (uploads.length === 0) {
+            return 0;
+        }
+
+        let index = uploads.findIndex(upload => upload === filename);
+        if (index === -1) {
+            console.log(`${filename} was not re-uploaded, using saved index instead as fallback.`)
+            return localStorage.getIndex()
+        }
+        return index;
+    }
+
+    function galleryOpenedListener(lightbox) {
+        console.log(`Gallery opened`);
+        //pswp instance not available after lightbox.init()
+        pswp = lightbox.pswp // fill the gallery instance variable for other functions to use and know gallery is open
+        loadAndShowSortingFooter();
+        zipToExport = null; //clear previously downloaded zip as new sorts will probably be created
+
+        //validate keybindings (program can move to wrong folder with duplicates)
+        let keybindings = localStorage.getKeybindings()
+        let usedKeys = []
+        for (let keybinding of keybindings) {
+            if (usedKeys.includes(keybinding.key)) {
+                logToUser("WARNING: Duplicate keybindings, program may sort incorrectly", 5000)
+            }
+            usedKeys.push(keybinding.key)
+        }
+    }
+
+    function galleryClosedListener() {
+        console.log('Gallery closed');
+        pswp = null; // clear the variable so other functions know the gallery is closed
+        let footerKeybindingDiv = document.getElementById("footer-keybindings")
+        footerKeybindingDiv.innerHTML = ""
+        document.getElementById("sort-footer").style.visibility = "hidden"
+        displayUploadInformation()
+        loadSortingExport()
+    }
+
+    function getMappedFolder(filename) {
+        let mappings = localStorage.getMappings()
+        if (Object.hasOwn(mappings, filename)) {
+            let folder = mappings[filename]
+            return folder
+        }
+        else {
+            return null
+        }
+    }
+
+    function gallerySlideChangedListener() {
+        // called after the gallery has loaded the next slide
+        let uploads = localStorage.getUploads()
+        let filename = uploads[pswp.currIndex]
+        localStorage.setFilename(filename)
+        localStorage.setIndex(pswp.currIndex) // save as fallback
+        document.getElementById("filename-display").innerText = filename
+        let mappedFolder = getMappedFolder(filename)
+        //if not found, folder will be undefined, which should not match anything
+        highlightMappingForCurrentItem(mappedFolder)
+    }
+
+    function initGallery(options) {
+        const lightbox = new PhotoSwipeLightbox(options);
+        const videoPlugin = new PhotoSwipeVideoPlugin(lightbox, {});
+        lightbox.on('change', () => {
+            gallerySlideChangedListener()
+        });
+        lightbox.on('firstUpdate', () => {
+            galleryOpenedListener(lightbox)
+        });
+        lightbox.on('close', () => {
+            galleryClosedListener()
+        });
+        lightbox.init();
+        let openGalleryButton = document.getElementById("open-gallery-button");
+        openGalleryButton.onclick = () => { //overwrite default click event
+            let indexToLoad = getIndexByFilename()
+            lightbox.loadAndOpen(indexToLoad);
+        };
+        openGalleryButton.classList.remove("link-button-inverse")
+
+    }
+
+
+    function displayUploadInformation() {
+        document.getElementById("previous-upload-info").innerHTML = "" //otherwise double information
+        let infoEl = document.getElementById("upload-info")
+        let uploadedFilenames = localStorage.getUploads()
+        let mappedFilenames = Object.keys(localStorage.getMappings())
+        let mappingsThatWorkOnThisUpload = mappedFilenames.filter(filename => uploadedFilenames.includes(filename))
+        let clearSortsLink = document.createElement("a")
+        clearSortsLink.classList.add("link")
+        clearSortsLink.addEventListener("click", clearMappings)
+        clearSortsLink.textContent = `Reset sorted items`
+        if (mappingsThatWorkOnThisUpload.length === 0) {
+            infoEl.textContent = `You've uploaded ${uploadedFilenames.length} files.`
+        }
+        else {
+            infoEl.textContent = `You've uploaded ${uploadedFilenames.length} files, of which ${mappingsThatWorkOnThisUpload.length} are already sorted. `
+            infoEl.appendChild(document.createElement("br"))
+            infoEl.appendChild(clearSortsLink)
+        }
+    }
+
+    function handleUploadedFiles(fileObjects) {
+        // openSection("keybinding-section")
+        // openSection("sort-section")
+        document.getElementById("download-universal-sort").classList.remove("link-button-inverse")
+
+        let uploadedFileObjects = Array.from(fileObjects);
+        naturalSortFileObjects(uploadedFileObjects)
+        let uploadedFilenames = uploadedFileObjects.map(fileObject => fileObject.name)
+        localStorage.setUploads(uploadedFilenames)
+        let uploadedFileUrls = uploadedFileObjects.map(fileObject => URL.createObjectURL(fileObject))
+        localStorage.setUploadUrls(uploadedFileUrls)
+        displayUploadInformation()
+        let options = loadGalleryArguments(uploadedFileObjects);
+
+        //wait for gallery arguments to have all the dimensions before showing open button
+        //could also show earlier, but not tested and user will experience stutters in gallery
+        const condition = () => {
+            //loadedCount is incremented in the listeners created in the loader function
+            // not sure if concurrency might be a problem in the future
+            updateProgressBar(loadedCount, uploadedFileObjects.length, "Gallery loaded!", "upload-progress")
+            return loadedCount >= uploadedFileObjects.length;
+        }
+        pollUntilTrue(condition, 200, 60000)
+            .then((result) => {
+                initGallery(options)
+            })
+            .catch((error) => {
+                logToUser(error)
+            });
+    }
+
+    function generateUnusedHotkey() {
+        let keys = [
+            'q', 'w', 'e', 'r', 't', 'a', 's', 'd', 'f', 'z', 'x', 'c', 'v', 'u', 'i', 'o', 'p', 'j', 'k', 'l', 'n', 'm'
+        ]
+        for (let keybinding of localStorage.getKeybindings()) {
+            if (keys.includes(keybinding.key)) {
+                let indexToDelete = keys.findIndex((key) => key === keybinding.key);
+                keys.splice(indexToDelete, 1);
+                continue
+            }
+            break
+        }
+        if (keys.length === 0) {
+            console.log("Could not find an unused hotkey.")
+            return '!'
+        }
+        return keys[0]
+    }
+
+    function addNewKeybinding() {
+        let keybinding = {
+            id: uid(), //unique id, so i dont have to check for duplicate keys / folders
+            key: generateUnusedHotkey(),
+            folder: "folder-name", //this value is checked to see if we need to show placeholder
+        }
+        let keybindings = localStorage.getKeybindings()
+        keybindings.push(keybinding)
+        localStorage.setKeybindings(keybindings)
+        appendToKeybindingTable(keybinding)
+        return keybinding;
+    }
+
+    function updateKeybinding(keybinding) {
+        let keybindings = localStorage.getKeybindings()
+        let indexToUpdate = keybindings.findIndex((element) => element.id === keybinding.id);
+        keybindings[indexToUpdate] = keybinding;
+        localStorage.setKeybindings(keybindings);
+    }
+
+    function deleteKeybinding(id) {
+        let keybindings = localStorage.getKeybindings()
+        let indexToDelete = keybindings.findIndex((element) => element.id === id);
+        keybindings.splice(indexToDelete, 1);
+        localStorage.setKeybindings(keybindings)
+    }
+
+    function clearKeybindings() {
+        //return true if keybindings were cleared
+        // clear in storage
+        let keybindings = localStorage.getKeybindings()
+        if (!confirm(`Clear ${keybindings.length} keybindings?`)) {
+            return false;
+        }
+        localStorage.setKeybindings([])
+
+        // clear in DOM
+        let keybindingRows = document.getElementsByClassName("flex-table-row")
+        keybindingRows = Array.from(keybindingRows);
+        keybindingRows.shift(); // don't remove the first element, the header
+        keybindingRows.forEach(keybindingRow => keybindingRow.remove())
+        return true;
+    }
+
+
+    function appendToKeybindingTable(keybinding) {
+        const keybindingsContainer = document.getElementById('keybindings-table');
+
+        const keybindingRow = document.createElement('div');
+        keybindingRow.classList.add('flex-table-row');
+
+        const hotkeyInput = document.createElement('button');
+        hotkeyInput.classList.add('invisible-button');
+        hotkeyInput.title = "Change hotkey"
+        hotkeyInput.classList.add('flex-table-cell');
+        hotkeyInput.classList.add('flex-table-small-cell');
+        hotkeyInput.textContent = keybinding.key;
+        hotkeyInput.addEventListener("click", () => {
+            console.log(`Waiting for user to press key to bind to folder '${keybinding.folder}'...`)
+            let hotkeyListeningHtml = `<span class="floater">👂</span>`
+            if (hotkeyInput.innerHTML === hotkeyListeningHtml) {
+                //cancel keybind if button is clicked again by simulating escape press (hack)
+                document.dispatchEvent(new KeyboardEvent('keydown', {'key': 'Escape'}));
+                hotkeyInput.textContent = keybinding.key;
+                return;
+            }
+            // hotkeyInput.textContent = "👂"
+            hotkeyInput.innerHTML = hotkeyListeningHtml;
+
+            document.addEventListener("keydown", event => {
+                if (event.key === "Escape") {
+                    console.log("Bind cancelled.")
+                    hotkeyInput.textContent = keybinding.key;
+                    return;
+                }
+
+                hotkeyInput.textContent = event.key
+                keybinding.key = event.key
+                updateKeybinding(keybinding);
+                console.log(`Set '${event.key}' as key for folder '${keybinding.folder}'`)
+            }, {once: true})
+        })
+
+
+        const folderInput = document.createElement('input');
+        folderInput.classList.add('flex-table-cell');
+        folderInput.classList.add('flex-table-big-cell');
+        if (keybinding.folder !== "folder-name") {
+            folderInput.value = keybinding.folder;
+        }
+        folderInput.placeholder = "folder name"
+        folderInput.addEventListener('input', function () {
+            keybinding.folder = folderInput.value;
+            updateKeybinding(keybinding)
+        });
+
+        const deleteButton = document.createElement('button');
+        deleteButton.classList.add('invisible-button');
+        deleteButton.classList.add('flex-table-cell');
+        deleteButton.classList.add('flex-table-small-cell');
+        deleteButton.textContent = '❌';
+        deleteButton.title = "Delete"
+        deleteButton.addEventListener('click', () => {
+            deleteKeybinding(keybinding.id);
+            keybindingRow.remove();
+        });
+
+        keybindingRow.appendChild(hotkeyInput);
+        keybindingRow.appendChild(folderInput);
+        keybindingRow.appendChild(deleteButton);
+
+        keybindingsContainer.appendChild(keybindingRow);
+    }
+
+    const uid = function () {
+        return Date.now().toString(36) + Math.random().toString(36).substring(2);
+    }
+
+    function loadKeybindingTable() {
+        let keybindings = localStorage.getKeybindings()
+        if (keybindings.length === 0) {
+            return;
+        }
+        // let keybindingTable = document.getElementById("keybindings-table")
+        // appendToKeybindingTable({key: "hoi", folder: "haha"})
+        keybindings.forEach(keybinding => {
+            appendToKeybindingTable(keybinding)
+        })
+    }
+
+    function mapToFolder(folder) {
+        //applies a keybinding to the current item open in the gallery
+        let filename = localStorage.getFilename()
+        console.log(`Move ${filename} to ${folder}`)
+        let mappings = localStorage.getMappings()
+        mappings[filename] = folder
+        localStorage.setMappings(mappings)
+    }
+
+    function applyKeybindingByKey(key) {
+        if (!pswp) {
+            //gallery not open
+            return;
+        }
+        let keybindings = localStorage.getKeybindings()
+        let keybindingMatchIndex = keybindings.findIndex(keybinding => keybinding.key === key)
+
+        if (keybindingMatchIndex === -1) {
+            //key not bound to any keybinding
+            return;
+        }
+        let keybinding = keybindings[keybindingMatchIndex]
+        mapToFolder(keybinding.folder)
+
+        let footerKeybindingElement = document.getElementById("footer-keybindings")
+        shakeElement(footerKeybindingElement.children[keybindingMatchIndex])
+
+        pswp.next()
+    }
+
+    async function loadExampleImages(fast = false) {
+        logToUser("Example upload loading...")
+        let mockEvent = await getMockUploadEvent(fast)
+        onUploadListener(mockEvent)
+        logToUser("Example uploaded!")
+    }
+
+    function getExampleKeybindings() {
+        let keybindings = []
+        keybindings.push({id: "id1", key: "q", folder: "queens"})
+        keybindings.push({id: "id2", key: "w", folder: "water-pictures"})
+        keybindings.push({id: "id3", key: "e", folder: "elephants"})
+        keybindings.push({id: "id4", key: "r", folder: "rainbows"})
+        keybindings.push({id: "id5", key: "t", folder: "other"})
+        return keybindings;
+    }
+
+    function setExampleKeybindings() {
+        if (clearKeybindings()) {
+            localStorage.setKeybindings(getExampleKeybindings())
+            loadKeybindingTable()
+        }
+    }
+
+    function clearStorage() {
+        if (!confirm("Clear all saved data?")) {
+            return;
+        }
+        localStorage.clear()
+        location.reload()
+    }
+
+    function onUploadListener({target}) {
+        if (!target.files || !target.files.length) {
+            logToUser("No files selected.")
+            return;
+        }
+        handleUploadedFiles(target.files)
+    }
+
+    function clearMappings() {
+        let mappings = localStorage.getMappings()
+        if (!confirm(`Clear ${Object.keys(mappings).length} sorted items?`)) {
+            return;
+        }
+        localStorage.setMappings({})
+        displayUploadInformation()
+        loadSortingExport()
+    }
+
+    function downloadTextAsFile(filename, text) {
+        let element = document.createElement('a');
+        element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+        element.setAttribute('download', filename);
+
+        element.style.display = 'none';
+        document.body.appendChild(element);
+
+        element.click();
+
+        document.body.removeChild(element);
+    }
+
+
+    function getUndoCommands(mv_cmd = "mv", delimiter = "/") {
+        let mappings = localStorage.getMappings()
+        let mappingKeys = Object.keys(mappings);
+        let undoFileContent = ``
+
+        mappingKeys.forEach(key => {
+            undoFileContent += `${mv_cmd} ${mappings[key]}${delimiter}${key} .${delimiter}\n`
+        })
+        return undoFileContent
+    }
+
+    function getApplyCommands(mv_cmd = "mv", delimiter = "/") {
+        let mappings = localStorage.getMappings()
+        let mappingKeys = Object.keys(mappings);
+        let mappingValues = Object.values(mappings)
+        let uniqueMappingValues = mappingValues.filter((value, index, array) => array.indexOf(value) === index);
+        let applyFileContent = ``
+
+        uniqueMappingValues.forEach(value => {
+            applyFileContent += `mkdir "${value}"\n`
+        })
+
+        mappingKeys.forEach(key => {
+            applyFileContent += `${mv_cmd} "${key}" "${mappings[key]}${delimiter}"\n`
+        })
+        return applyFileContent
+    }
+
+    async function blobUrlToBlob(url) {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const blob = await response.blob();
+            return blob;
+        } catch (error) {
+            console.log('Error converting URL to Blob:', error);
+            return null;
+        }
+    }
+
+    function updateProgressBar(currentIndex, totalIndex, resolveMessage, id) {
+        let container = document.getElementById(id)
+        container.style.display = "block"
+        let progressEl = container.children[0]
+        let textEl = container.children[1]
+        let progress = (currentIndex / totalIndex) * 100;
+        // let progressText = progress.toFixed(2) + '%';
+
+        progressEl.style.width = Math.min(progress, 100) + '%'; //visual display of progress
+        textEl.textContent = `${currentIndex}/${totalIndex}` //textual display of progress
+
+        if (currentIndex >= totalIndex) {
+            textEl.innerText = resolveMessage;
+        }
+    }
+
+    let zipToExport = null; //store export zip in global variable, for fast redownload
+    async function exportZip() {
+        if (zipToExport) {
+            console.log("Downloading previously generated zip")
+            saveAs(zipToExport, "sorted.zip");
+            return
+        }
+        console.log("Generating zip...")
+
+        let mappings = localStorage.getMappings()
+        let mappingKeys = Object.keys(mappings)
+        let uploads = localStorage.getUploads()
+        let uploadUrls = localStorage.getUploadUrls()
+        if (uploadUrls.length < 1) {
+            logToUser("No files uploaded")
+            return;
+        }
+
+        // let totalIndex = map;
+        let resolveMessage = 'Creating download...';
+        let progressBarId = "zip-progress"
+        let totalIndex = uploads.length
+
+        let index = 0
+        zipToExport = new JSZip();
+        for (let upload of uploads) {
+            let url = uploadUrls[index]
+            let blob = await blobUrlToBlob(url)
+            let folder = mappings[upload]
+            updateProgressBar(++index, totalIndex, resolveMessage, progressBarId)
+            if (folder) {
+                console.log(`${index}: saving ${folder}/${upload}`)
+                zipToExport.file(`${folder}/${upload}`, blob, {binary: true})
+            }
+            else {
+                // store unsorted items in root of zip
+                console.log(`${index}: saving unsorted ${upload} in root folder`)
+                zipToExport.file(upload, blob, {binary: true})
+            }
+        }
+        zipToExport.generateAsync({type: "blob"}).then(function (zip) {
+            zipToExport = zip
+            updateProgressBar(1, 1, "Download ready!", progressBarId)
+            saveAs(zip, "sorted.zip");
+        }, function (err) {
+            logToUser("Error generating .zip file.")
+        });
+    }
+
+    function setupListeners() {
+        // refresh page title
+        document.getElementById("title").addEventListener("click", () => location.reload())
+
+        //gallery opener, default action
+        let galleryButton = document.getElementById("open-gallery-button")
+        galleryButton.onclick = () => {
+            logToUser("No files uploaded")
+        }
+
+        // file uploader
+        let fileInput = document.getElementById("file-upload");
+        fileInput.addEventListener("change", (event) => {
+            onUploadListener(event)
+        });
+
+
+        // folder uploader
+        let folderInput = document.getElementById("folder-upload");
+        folderInput.addEventListener("change", (event) => {
+            onUploadListener(event)
+        });
+
+        //page wide file drop
+        const dragTarget = document.getElementById('drag-target');
+        document.addEventListener('dragenter', function (event) {
+            dragCounter++;
+            dragTarget.classList.add('show');
+        });
+        document.addEventListener('dragleave', function (event) {
+            dragCounter--;
+            if (dragCounter === 0) {
+                // Perform your actions here when leaving the drag area
+                console.log("Leave")
+                dragTarget.classList.remove('show');
+            }
+        });
+        document.addEventListener('dragover', function (event) {
+            event.preventDefault();
+        });
+        document.addEventListener('drop', function (event) {
+            console.log(event)
+            dragCounter = 0;
+            event.preventDefault();
+            dragTarget.classList.remove('show');
+            if (event.dataTransfer.files.length === 0) {
+                logToUser("No files dropped.")
+                return;
+            }
+            handleUploadedFiles(event.dataTransfer.files)
+        });
+
+        //clear mappings / sorts button
+        let clearMappingsButton = document.getElementById("clear-mappings-button")
+        clearMappingsButton.addEventListener("click", () => clearMappings())
+
+        //keybindings table
+        let addKeybindingButton = document.getElementById("add-keybinding-button")
+        addKeybindingButton.addEventListener("click", () => addNewKeybinding())
+        // let clearKeybindingsButton = document.getElementById("clear-keybindings-button")
+        // clearKeybindingsButton.addEventListener("click", () => clearKeybindings())
+
+        // key listener for keybindings
+        document.addEventListener("keydown", event => applyKeybindingByKey(event.key))
+
+        //testing / example values loader buttons
+        let exampleKeybindingsButton = document.getElementById("example-keybindings-button")
+        exampleKeybindingsButton.addEventListener("click", () => setExampleKeybindings())
+        let exampleKeybindingsButtonExample = document.getElementById("example-upload-link")
+        exampleKeybindingsButtonExample.addEventListener("click", () => setExampleKeybindings())
+
+        let exampleImagesButton = document.getElementById("example-images-button")
+        exampleImagesButton.addEventListener("click", async () => await loadExampleImages())
+
+        let uploadExampleButton = document.getElementById("upload-example-button")
+        uploadExampleButton.addEventListener("click", async () => await loadExampleImages())
+
+        let exampleImagesButtonFast = document.getElementById("example-images-fast-button")
+        exampleImagesButtonFast.addEventListener("click", async () => await loadExampleImages(true))
+        let clearStorageButton = document.getElementById("clear-storage-button")
+        clearStorageButton.addEventListener("click", () => clearStorage())
+
+        //zip download
+        let zipDownload = document.getElementById("download-universal-sort")
+        zipDownload.addEventListener("click", async event => {
+            await exportZip()
+        })
+    }
+
+
+    function setupLocalStorageBindings() {
+        Storage.prototype.setObject = function (key, value) {
+            this.setItem(key, JSON.stringify(value));
+        }
+        Storage.prototype.getObject = function (key) {
+            let value = this.getItem(key);
+            return value && JSON.parse(value);
+        }
+        // keybindings: an array of objects, where each object is a keybinding object with attributes: key, folder
+        Storage.prototype.getKeybindings = function () {
+            return localStorage.getObject("keybindings") || []
+        }
+        Storage.prototype.setKeybindings = function (keybindings) {
+            return localStorage.setObject("keybindings", keybindings)
+        }
+        // mappings: an object where each key is a filename, with as value the folder it needs to be moved to
+        Storage.prototype.getMappings = function () {
+            return localStorage.getObject("mappings") || {}
+        }
+        Storage.prototype.setMappings = function (mappings) {
+            return localStorage.setObject("mappings", mappings)
+        }
+        // filename: a string of the name of the file the gallery is currently showing / where the gallery last left off
+        Storage.prototype.getFilename = function () {
+            return localStorage.getItem("filename")
+        }
+        Storage.prototype.setFilename = function (filename) {
+            return localStorage.setItem("filename", filename)
+        }
+        // index: an int of the index of the item gallery, FALLBACK for filename
+        Storage.prototype.getIndex = function () {
+            return parseInt(localStorage.getItem("index") || 0)
+        }
+        Storage.prototype.setIndex = function (index) {
+            return localStorage.setItem("index", index)
+        }
+        // uploads: an array of filenames of the uploaded files
+        Storage.prototype.getUploads = function () {
+            return localStorage.getObject("uploads") || []
+        }
+        Storage.prototype.setUploads = function (uploads) {
+            return localStorage.setObject("uploads", uploads)
+        }
+
+        // file url uploads: an array of urls to the uploaded files
+        Storage.prototype.getUploadUrls = function () {
+            return localStorage.getObject("upload-urls") || []
+        }
+        Storage.prototype.setUploadUrls = function (uploadsUrls) {
+            return localStorage.setObject("upload-urls", uploadsUrls)
+        }
+
+        // boolean storage, used for section state memory
+        Storage.prototype.setBoolean = function (key, value) {
+            this.setItem(key, value)
+        }
+        Storage.prototype.getBoolean = function (key) {
+            let value = JSON.parse(this.getItem(key));
+            return value;
+        }
+        Storage.prototype.toggleBoolean = function (key) {
+            this.setBoolean(key, !this.getBoolean(key))
+        }
+
+    }
+
+    function handleFirstVisit() {
+        if (localStorage.getObject("keybindings") !== null) {
+            console.log("You have visited this page earlier.")
+            return;
+        }
+        console.log("Setting defaults for first visit.")
+
+        // example keybindings
+        localStorage.setKeybindings(getExampleKeybindings())
+
+        // // open export section for platform
+        // let platform = window.navigator.platform
+        // if (platform.toLowerCase().includes("win")) {
+        //     openSection("apply-sort-section-windows")
+        //     closeSection("apply-sort-section-linux")
+        // }
+        // else {
+        //     openSection("apply-sort-section-linux")
+        //     closeSection("apply-sort-section-windows")
+        // }
+    }
+
+    function showUserPreviousUploads() {
+        let previousUploadInfo = document.getElementById("previous-upload-info")
+        let uploadedFilenames = localStorage.getUploads()
+        if (uploadedFilenames.length < 1) {
+            return;
+        }
+        let mappedFilenames = Object.keys(localStorage.getMappings())
+        let mappingsThatWorkOnThisUpload = mappedFilenames.filter(filename => uploadedFilenames.includes(filename))
+        let p1 = `Previous time, you:<ul>`
+        let p2 = `<li>Uploaded ${uploadedFilenames.length} files</li>`
+        let p3 = `<li>Sorted ${mappingsThatWorkOnThisUpload.length} files</li>`
+        let p4 = `</ul>`
+        let p5 = `Reupload if you want to continue.`
+        // let p6 = `<br>Everything except files are immediately saved in your browser.`
+        previousUploadInfo.innerHTML = p1 + p2 + p3 + p4 + p5
+    }
+
+    function openSection(sectionName) {
+        let section = document.getElementById(sectionName)
+        let sectionButton = section.querySelector("span")
+        let sectionContent = section.querySelectorAll("div")[1]
+        sectionContent.style.display = "block"
+        sectionButton.style.transform = "rotate(90deg)"
+        sectionContent.style.animation = "fadeIn 0.5s ease-out"
+        localStorage.setBoolean(sectionName, true)
+    }
+
+    function closeSection(sectionName) {
+        let section = document.getElementById(sectionName)
+        let sectionButton = section.querySelector("span")
+        let sectionContent = section.querySelectorAll("div")[1]
+        sectionContent.style.display = "none"
+        sectionButton.style.transform = "rotate(0deg)"
+        localStorage.setBoolean(sectionName, false)
+    }
+
+    function applySectionStateFromStorage(sectionName) {
+        let isOpen = localStorage.getBoolean(sectionName)
+        if (isOpen) {
+            openSection(sectionName)
+        }
+        else {
+            closeSection(sectionName)
+        }
+    }
+
+    function setupSection(sectionName) {
+        let section = document.getElementById(sectionName)
+        let sectionButton = section.querySelector("img")
+        sectionButton = section.querySelector("div")
+        sectionButton.addEventListener("click", () => {
+            localStorage.toggleBoolean(sectionName)
+            applySectionStateFromStorage(sectionName)
+        })
+        applySectionStateFromStorage(sectionName)
+    }
+
+
+    function setupSections() {
+        let sections = document.querySelectorAll('.c-section')
+        sections.forEach(section => {
+            setupSection(section.id)
+        })
+        //always open upload section on refresh, because uploads are always gone
+        openSection("upload-section")
+    }
+
+    function getExportSectionContent(commands, filename, step2 = "sort") {
+        let container = document.createElement("div")
+
+        //content
+        let contentDisplay = document.createElement("pre")
+        let content = `#1: open terminal in folder with uploaded files\n`
+        content += `#2: paste these commands in to ${step2}\n\n`
+        content += commands
+        contentDisplay.innerHTML += content
+        container.appendChild(contentDisplay)
+
+        //copy button
+        let copyButton = document.createElement("button")
+        copyButton.classList.add("link-button", "link-button-inverse")
+        copyButton.textContent = "Copy"
+        copyButton.addEventListener("click", event => {
+            let msg = "ERROR"
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(content);
+                msg = `Copied!`
+            }
+            else {
+                logToUser("Copy only works over HTTPS")
+            }
+            copyButton.textContent = msg;
+            copyButton.classList.remove("link-button-inverse")
+            setTimeout(function () {
+                copyButton.classList.add("link-button-inverse");
+                copyButton.textContent = "Copy"
+            }, 2000);
+        })
+        container.appendChild(copyButton)
+
+        //download button
+        let downloadButton = document.createElement("button")
+        downloadButton.classList.add("link-button", "link-button-inverse")
+        downloadButton.textContent = "Download"
+        downloadButton.addEventListener("click", event => {
+            downloadTextAsFile(filename, content)
+        })
+        container.appendChild(downloadButton)
+        return container
+    }
+
+    function loadSortingExport() {
+        let linuxSection = document.getElementById("linux-export")
+        linuxSection.innerHTML = ""
+        let linuxApplyDiv = getExportSectionContent(getApplyCommands(), "apply.sh", "sort")
+        linuxSection.appendChild(linuxApplyDiv)
+
+        let linuxUndoSection = document.getElementById("linux-undo")
+        linuxUndoSection.innerHTML = ""
+        let linuxUndoDiv = getExportSectionContent(getUndoCommands(), "undo.sh", "undo sort")
+        linuxUndoSection.appendChild(linuxUndoDiv)
+
+        //windows
+        let windowsApplySection = document.getElementById("windows-export")
+        windowsApplySection.innerHTML = ""
+        let windowsApplyDiv = getExportSectionContent(getApplyCommands("move", "\\"), "apply.bat", "sort")
+        windowsApplySection.appendChild(windowsApplyDiv)
+
+        let windowsUndoSection = document.getElementById("windows-undo")
+        windowsUndoSection.innerHTML = ""
+        let windowsUndoDiv = getExportSectionContent(getUndoCommands("move", "\\"), "undo.bat", "undo sort")
+        windowsUndoSection.appendChild(windowsUndoDiv)
+    }
+
+    function onLoad() {
+        setupLocalStorageBindings()
+        localStorage.setUploadUrls([]) // always clear upload urls, as they cannot persist
+        showUserPreviousUploads()
+        handleFirstVisit()
+        loadKeybindingTable()
+        loadSortingExport()
+        setupSections()
+        setupListeners()
+    }
+
+
+    onLoad();
+
+</script>
+</html>
+
