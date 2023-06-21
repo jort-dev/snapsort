@@ -7,9 +7,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/photoswipe/5.3.7/photoswipe.min.css"
           integrity="sha512-LFWtdAXHQuwUGH9cImO9blA3a3GfQNkpF2uRlhaOpSbDevNyK1rmAjs13mtpjvWyi+flP7zYWboqY+8Mkd42xA=="
           crossorigin="anonymous" referrerpolicy="no-referrer"/>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/photoswipe/5.3.7/photoswipe-lightbox.esm.min.js"
-            integrity="sha512-NM5W4Rpvwxo9iNWn2d8hI4nbn2clDfYR9RBVafwxB72h/wFw3oCmNqub50C57c3M+J8W3VyG8ZE53BsppwM0Ig=="
-            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <link href="https://fonts.googleapis.com/css?family=Merriweather:300&display=swap" rel="stylesheet">
     <base target="_blank">
 </head>
@@ -68,7 +65,7 @@
 
     .title {
         font-size: 3em;
-        font-style: italic;
+        /*font-style: italic;*/
     }
 
     /*subtitle under h1 header*/
@@ -77,6 +74,21 @@
         margin-top: -2rem;
         font-style: italic;
 
+    }
+
+    .title-big {
+        font-size: 1.8rem;
+        font-weight: bold;
+    }
+
+    .title-medium {
+        font-size: 1.4rem;
+        font-weight: bold;
+    }
+
+    .title-small {
+        font-size: 1rem;
+        font-weight: bold;
     }
 
     /*all links on the site*/
@@ -111,9 +123,8 @@
         /*margin-right: 5px;*/
         cursor: pointer;
         margin: 0.5em;
-        border-radius: 0.4em;
+        border-radius: 0.4rem;
     }
-
 
     .invisible-button {
         background-color: transparent;
@@ -145,7 +156,7 @@
         position: relative;
         overflow: hidden;
         display: inline-block;
-        margin: 0.5em;
+        margin: 0.5rem;
     }
 
     .upload-btn-wrapper input[type=file] {
@@ -281,20 +292,6 @@
         flex-direction: column;
     }
 
-    .title-big {
-        font-size: 1.8rem;
-        font-weight: bold;
-    }
-
-    .title-medium {
-        font-size: 1.4rem;
-        font-weight: bold;
-    }
-
-    .title-small {
-        font-size: 1rem;
-        font-weight: bold;
-    }
 
     /*hold the title and the collapse image button*/
     .c-section-title-row {
@@ -492,6 +489,7 @@
         position: relative;
         border-radius: 1000px;
         display: none;
+        white-space: nowrap;
     }
 
     .progress {
@@ -561,6 +559,49 @@
         }
     }
 
+    .code {
+        background-color: #f4f4f4;
+        border: 0.1rem solid #ccc;
+        border-radius: 0.4rem;
+    }
+
+    .code-navbar {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.3rem;
+        border-bottom: 1px solid #ccc;
+    }
+
+    .code-navbar-buttons {
+        display: flex;
+    }
+
+    .code-content {
+        font-family: Consolas, monospace;
+        font-size: 0.75rem;
+        line-height: 1.5;
+        padding: 0.8rem;
+        white-space: pre-wrap;
+    }
+
+    .code-content.collapsed {
+        max-height: 4rem;
+        overflow: hidden;
+        background-image: linear-gradient(to bottom, #000000, #ffffff);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        /*-webkit-text-fill-color: transparent;*/
+    }
+
+    .code-button {
+        /*width: 2em;*/
+        /*height: 1em;*/
+        /*border: 1px solid black;*/
+        /*border-radius: 0.4rem;*/
+        margin-left: 0.3rem;
+    }
+
 </style>
 <div id="drag-target">
     <span id="drag-text">Drop to upload</span>
@@ -615,7 +656,7 @@
                         <div class="flex-table-cell flex-table-big-cell">Folder</div>
                         <!--hehe-->
                         <button class="flex-table-cell flex-table-small-cell invisible-button"
-                                id="add-keybinding-button"><span
+                                id="add-keybinding-button"><span title="Add"
                                 style="color: transparent;  text-shadow: 0 0 0 var(--theme-color-green); transform: rotate(45deg); display: inline-block">❌</span>
                         </button>
                     </div>
@@ -683,6 +724,7 @@
                         </button>
                         <br>
                         This is slower and takes more space compared to applying the sort with commands.<br>
+                        Creating the download will take a long time.<br>
                         The zip will contain all the files you just uploaded.
                     </div>
                 </section>
@@ -865,6 +907,7 @@
         const fileType = file['type'];
         // load image
         const urlObj = URL.createObjectURL(file);
+        let loadVideos = false;
 
         if (fileType.includes("image")) {
             item.src = urlObj;
@@ -877,7 +920,7 @@
             img.src = urlObj; //this loads the image, triggering the above event
         }
         // load video (takes long)
-        else if (fileType.includes("video")) {
+        else if (fileType.includes("video") && loadVideos) {
             let video = document.createElement("video");
             video.addEventListener("loadeddata", function () {
                 if (video.videoWidth === 0 || video.videoHeight === 0) {
@@ -897,7 +940,7 @@
             });
             video.src = urlObj; // this loads the video, triggering the above event
         }
-        // fallback for remanining file types
+        // fallback for remaining file types
         else {
             item.html = itemHtml;
             ++loadedCount
@@ -906,22 +949,6 @@
         return item;
     }
 
-    function pollUntilTrue(condition, interval, timeout) {
-        return new Promise((resolve, reject) => {
-            const startTime = Date.now();
-            const intervalId = setInterval(() => {
-                const elapsedTime = Date.now() - startTime;
-                if (condition()) {
-                    clearInterval(intervalId);
-                    resolve();
-                }
-                else if (elapsedTime >= timeout) {
-                    clearInterval(intervalId);
-                    reject(new Error(`Timeout of ${timeout}ms reached`));
-                }
-            }, interval);
-        });
-    }
 
     async function urlToImageFile(filename, url, fast = false) {
         if (fast) {
@@ -990,7 +1017,7 @@
         });
         return {
             dataSource: items,
-            pswpModule: () => import('/photoswipe/dist/photoswipe.esm.js'),
+            pswpModule: () => import('https://cdnjs.cloudflare.com/ajax/libs/photoswipe/5.3.7/photoswipe.esm.min.js'),
             getViewportSizeFn: function (options, pswp) {
                 // also see the paddingfn attribute, aso for each img possible
                 return {
@@ -1209,21 +1236,17 @@
         displayUploadInformation()
         let options = loadGalleryArguments(uploadedFileObjects);
 
-        //wait for gallery arguments to have all the dimensions before showing open button
-        //could also show earlier, but not tested and user will experience stutters in gallery
-        const condition = () => {
-            //loadedCount is incremented in the listeners created in the loader function
-            // not sure if concurrency might be a problem in the future
+        // show the gallery open button. items may not have been indexed yet and it may stutter
+        initGallery(options)
+
+        // update loading progress bar
+        let intervalId = setInterval(() =>{
             updateProgressBar(loadedCount, uploadedFileObjects.length, "Gallery loaded!", "upload-progress")
-            return loadedCount >= uploadedFileObjects.length;
-        }
-        pollUntilTrue(condition, 200, 60000)
-            .then((result) => {
-                initGallery(options)
-            })
-            .catch((error) => {
-                logToUser(error)
-            });
+            if(loadedCount >= uploadedFileObjects.length){
+                clearInterval(intervalId);
+                console.log("All uploaded items indexed.")
+            }
+        }, 1000);
     }
 
     function generateUnusedHotkey() {
@@ -1558,16 +1581,16 @@
             let folder = mappings[upload]
             updateProgressBar(++index, totalIndex, resolveMessage, progressBarId)
             if (folder) {
-                console.log(`${index}: saving ${folder}/${upload}`)
                 zipToExport.file(`${folder}/${upload}`, blob, {binary: true})
             }
             else {
                 // store unsorted items in root of zip
-                console.log(`${index}: saving unsorted ${upload} in root folder`)
                 zipToExport.file(upload, blob, {binary: true})
             }
         }
+        logToUser("Generating download from zip...")
         zipToExport.generateAsync({type: "blob"}).then(function (zip) {
+            //this is freaking slow, TODO
             zipToExport = zip
             updateProgressBar(1, 1, "Download ready!", progressBarId)
             saveAs(zip, "sorted.zip");
@@ -1822,19 +1845,44 @@
     }
 
     function getExportSectionContent(commands, filename, step2 = "sort") {
+        //could do: buttons read content from html element instead
+
         let container = document.createElement("div")
 
+        // instructions
+        let instruction = `Open terminal in folder with uploaded files, and<br>`
+        instruction += `paste below commands in to ${step2}:<br><br>`
+        let instructionDiv = document.createElement("div")
+        instructionDiv.innerHTML = instruction
+
+        // code
+        let codeDiv = document.createElement("div")
+        codeDiv.classList.add("code")
+
         //content
-        let contentDisplay = document.createElement("pre")
-        let content = `#1: open terminal in folder with uploaded files\n`
-        content += `#2: paste these commands in to ${step2}\n\n`
-        content += commands
-        contentDisplay.innerHTML += content
-        container.appendChild(contentDisplay)
+        let codeContentPre = document.createElement("pre")
+        codeContentPre.classList.add("code-content")
+        let content = commands
+        codeContentPre.innerHTML += content
+        codeContentPre.classList.add("collapsed")
+
+
+        // navbar
+        let navBar = document.createElement("div")
+        navBar.classList.add("code-navbar")
+
+        //navbar filename
+        let filenameSpan = document.createElement("span")
+        filenameSpan.textContent = filename
+
+        //navbar buttons
+        let navBarButtons = document.createElement("div")
+        navBarButtons.classList.add("code-navbar-buttons")
+
 
         //copy button
         let copyButton = document.createElement("button")
-        copyButton.classList.add("link-button", "link-button-inverse")
+        copyButton.classList.add("code-button")
         copyButton.textContent = "Copy"
         copyButton.addEventListener("click", event => {
             let msg = "ERROR"
@@ -1846,45 +1894,66 @@
                 logToUser("Copy only works over HTTPS")
             }
             copyButton.textContent = msg;
-            copyButton.classList.remove("link-button-inverse")
             setTimeout(function () {
-                copyButton.classList.add("link-button-inverse");
                 copyButton.textContent = "Copy"
             }, 2000);
         })
-        container.appendChild(copyButton)
 
         //download button
         let downloadButton = document.createElement("button")
-        downloadButton.classList.add("link-button", "link-button-inverse")
+        downloadButton.classList.add("code-button")
         downloadButton.textContent = "Download"
         downloadButton.addEventListener("click", event => {
             downloadTextAsFile(filename, content)
         })
-        container.appendChild(downloadButton)
+
+        //content collapse
+        let collapseButton = document.createElement("button")
+        collapseButton.classList.add("code-button")
+        collapseButton.textContent = "Expand"
+        collapseButton.addEventListener("click", event => {
+            codeContentPre.classList.toggle("collapsed")
+            if(codeContentPre.classList.contains("collapsed")){
+                collapseButton.textContent = "Expand"
+            }
+            else{
+                collapseButton.textContent = "Collapse"
+            }
+        })
+
+        container.appendChild(instructionDiv)
+        container.appendChild(codeDiv)
+        codeDiv.appendChild(navBar)
+        codeDiv.appendChild(codeContentPre)
+        navBar.appendChild(filenameSpan)
+        navBar.appendChild(navBarButtons)
+        navBarButtons.appendChild(copyButton)
+        navBarButtons.appendChild(downloadButton)
+        navBarButtons.appendChild(collapseButton)
+
         return container
     }
 
     function loadSortingExport() {
         let linuxSection = document.getElementById("linux-export")
         linuxSection.innerHTML = ""
-        let linuxApplyDiv = getExportSectionContent(getApplyCommands(), "apply.sh", "sort")
+        let linuxApplyDiv = getExportSectionContent(getApplyCommands(), "sort.sh", "sort")
         linuxSection.appendChild(linuxApplyDiv)
 
         let linuxUndoSection = document.getElementById("linux-undo")
         linuxUndoSection.innerHTML = ""
-        let linuxUndoDiv = getExportSectionContent(getUndoCommands(), "undo.sh", "undo sort")
+        let linuxUndoDiv = getExportSectionContent(getUndoCommands(), "undo-sort.sh", "undo sort")
         linuxUndoSection.appendChild(linuxUndoDiv)
 
         //windows
         let windowsApplySection = document.getElementById("windows-export")
         windowsApplySection.innerHTML = ""
-        let windowsApplyDiv = getExportSectionContent(getApplyCommands("move", "\\"), "apply.bat", "sort")
+        let windowsApplyDiv = getExportSectionContent(getApplyCommands("move", "\\"), "sort.bat", "sort")
         windowsApplySection.appendChild(windowsApplyDiv)
 
         let windowsUndoSection = document.getElementById("windows-undo")
         windowsUndoSection.innerHTML = ""
-        let windowsUndoDiv = getExportSectionContent(getUndoCommands("move", "\\"), "undo.bat", "undo sort")
+        let windowsUndoDiv = getExportSectionContent(getUndoCommands("move", "\\"), "undo-sort.bat", "undo sort")
         windowsUndoSection.appendChild(windowsUndoDiv)
     }
 
