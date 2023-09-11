@@ -907,7 +907,7 @@
         const fileType = file['type'];
         // load image
         const urlObj = URL.createObjectURL(file);
-        let loadVideos = false;
+        let loadVideos = true;
 
         if (fileType.includes("image")) {
             item.src = urlObj;
